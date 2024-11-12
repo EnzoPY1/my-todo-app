@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #202020; /* Color de fondo oscuro */
+  color: white; /* Color del texto */
+}
