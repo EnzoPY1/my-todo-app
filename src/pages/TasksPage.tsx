@@ -8,7 +8,7 @@ interface TasksPageProps {
 }
 
 const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
-  const { tasks } = useTaskStore();
+  const { tasks, loadInitialTasks } = useTaskStore();
   const location = useLocation();
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -17,6 +17,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
   const [sortBy, setSortBy] = useState<'date' | 'alphabetical'>('date');
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 5;
+  const [tasksToLoad, setTasksToLoad] = useState(1);
 
   useEffect(() => {
     if (location.state && location.state.success) {
@@ -25,7 +26,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
     }
   }, [location]);
 
-  // Filtrar tareas por búsqueda y estado
+  // Filtrar tareas
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
     const matchesFilter =
@@ -35,7 +36,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
     return matchesSearch && matchesFilter;
   });
 
-  // Ordenar tareas por fecha o alfabéticamente
+  // Ordenar tareas
   const sortedTasks = filteredTasks.sort((a, b) => {
     if (sortBy === 'date') {
       const dateA = new Date(a.createdAt).getTime();
@@ -52,11 +53,49 @@ const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
 
   const handlePageChange = (page: number) => setCurrentPage(page);
 
+  const pageNumbers = [];
+  const maxPagesToShow = 5;
+  const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+  let startPage = Math.max(currentPage - halfPagesToShow, 1);
+  let endPage = Math.min(currentPage + halfPagesToShow, totalPages);
+
+  if (currentPage - halfPagesToShow < 1) {
+    endPage = Math.min(1 + maxPagesToShow - 1, totalPages);
+  } else if (currentPage + halfPagesToShow > totalPages) {
+    startPage = Math.max(totalPages - maxPagesToShow + 1, 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pageNumbers.push(i);
+  }
+
+  // Función para manejar la carga de tareas desde la API
+  const handleLoadTasks = () => {
+    loadInitialTasks(tasksToLoad);
+  };
+
   return (
     <div className="p-4 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4" style={{ color: darkMode ? 'white' : 'black' }}>
-        Tus Tareas
-      </h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold" style={{ color: darkMode ? 'white' : 'black' }}>
+          Tus Tareas
+        </h1>
+        <div className="flex items-center space-x-2">
+          <input
+            type="number"
+            min="1"
+            value={tasksToLoad}
+            onChange={(e) => setTasksToLoad(Number(e.target.value))}
+            className="w-16 p-2 border rounded text-black"
+          />
+          <button
+            onClick={handleLoadTasks}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Cargar Tareas
+          </button>
+        </div>
+      </div>
       {success && <p className="text-green-500 mb-4">{success}</p>}
       <input
         type="text"
@@ -80,7 +119,7 @@ const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
           onChange={(e) => setSortBy(e.target.value as 'date' | 'alphabetical')}
           className={darkMode ? 'bg-gray-700 text-white p-2 rounded' : 'bg-[#1d599c] text-white p-2 rounded'}
         >
-          <option value="date">Fecha</option>
+          <option value="date">Fecha y Hora</option>
           <option value="alphabetical">Alfabético</option>
         </select>
         <select
@@ -93,22 +132,40 @@ const TasksPage: React.FC<TasksPageProps> = ({ darkMode }) => {
         </select>
       </div>
       <div className="grid grid-cols-1 gap-4">
-        {currentTasks.map(task => (
-          <TaskCard key={task.id} task={task} darkMode={darkMode} />
+        {currentTasks.map((task, index) => (
+          <TaskCard key={`${task.id}-${index}`} task={task} darkMode={darkMode} />
         ))}
       </div>
       <div className="mt-4 flex justify-center space-x-2">
-        {Array.from({ length: totalPages }, (_, index) => (
+        {currentPage > 1 && (
           <button
-            key={index}
-            onClick={() => handlePageChange(index + 1)}
+            onClick={() => handlePageChange(1)}
+            className="px-4 py-2 rounded bg-blue-500 text-white"
+          >
+            First
+          </button>
+        )}
+
+        {pageNumbers.map((page) => (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
             className={`px-4 py-2 rounded ${
-              currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-700 text-white'
+              currentPage === page ? 'bg-blue-500 text-white' : 'bg-gray-700 text-white'
             }`}
           >
-            {index + 1}
+            {page}
           </button>
         ))}
+
+        {currentPage < totalPages && (
+          <button
+            onClick={() => handlePageChange(totalPages)}
+            className="px-4 py-2 rounded bg-blue-500 text-white"
+          >
+            Last
+          </button>
+        )}
       </div>
     </div>
   );

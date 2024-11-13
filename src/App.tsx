@@ -1,12 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import TasksPage from "./pages/TasksPage";
 import TasksFormPage from "./pages/TasksFormPage";
 import Navbar from "./components/Navbar";
+import useTaskStore from "./store/taskStore";
 
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(true);
+  const { loadInitialTasks } = useTaskStore();
+
+  useEffect(() => {
+    loadInitialTasks(10);
+  }, [loadInitialTasks]);
 
   const toggleTheme = () => setDarkMode(!darkMode);
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 
 interface Task {
   id: number;
@@ -13,6 +14,7 @@ interface TaskStore {
   addTask: (title: string, description: string) => void;
   toggleTask: (id: number) => void;
   removeTask: (id: number) => void;
+  loadInitialTasks: (count: number) => Promise<void>; 
 }
 
 const loadTasksFromLocalStorage = (): Task[] => {
@@ -49,7 +51,26 @@ const useTaskStore = create<TaskStore>((set) => ({
     const updatedTasks = state.tasks.filter(task => task.id !== id);
     saveTasksToLocalStorage(updatedTasks);
     return { tasks: updatedTasks };
-  })
+  }),
+  loadInitialTasks: async (count: number) => {
+    try {
+      const response = await axios.get('https://jsonplaceholder.typicode.com/todos');
+      const apiTasks = response.data.slice(0, count).map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        description: '', 
+        createdAt: new Date().toLocaleString(),
+        completed: task.completed
+      }));
+      set((state) => {
+        const updatedTasks = [...apiTasks, ...state.tasks];
+        saveTasksToLocalStorage(updatedTasks);
+        return { tasks: updatedTasks };
+      });
+    } catch (error) {
+      console.error('Error loading tasks from API:', error);
+    }
+  }
 }));
 
 export default useTaskStore;
